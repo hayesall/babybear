@@ -16,9 +16,14 @@ class DataFrame:
         self.data = data
         self.columns = list(data[0].keys())
 
-    def mean(self, column: str) -> float:
-        values = [float(row[column]) for row in self.data if row[column] != "nan"]
-        return sum(values) / len(values)
+    def apply(self, func: Callable, columns: List[str]):
+        for c in columns:
+            for row in self.data:
+                row[c] = func(row[c])
+        return self
+
+    def reduce(self, func: Callable, column: str):
+        return func(row[column] for row in self.data)
 
     def where(self, predicate: Callable):
         subset = [{c: row[c] for c in self.columns} for row in self.data if predicate(row)]  # fmt: skip
