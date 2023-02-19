@@ -1,6 +1,6 @@
 # babybear 🐼
 
-*A microscopic data manipulation tool based on `pandas`.*
+*A microscopic, functional data manipulation tool based on `pandas`.*
 
 ## Motivation
 
@@ -9,15 +9,26 @@ levels of prior Python experience, and may not be comfortable with
 [Python environments](https://xkcd.com/1987/) or packages yet.
 
 `babybear` implements a pure-Python DataFrame with *select*, *where*,
-*slice indexing*, and aggregation with *mean* or *length*. All in ~30 lines of code.
+*function application*, *reduce aggregation*, and
+*slice indexing*. All in ~40 lines of code.
+
+Those familiar with functional programming may recognize these as
+`map`, `filter`, and `reduce` operations:
 
 ```python
 import babybear as bb
 
-df = bb.read_csv("penguins.csv")
+df = bb.read_csv("penguins-sample.csv")
 
-# Compute the mean body mass for penguins with a bill length > 49
-df.where(lambda row: float(row["bill_length_mm"]) > 49).mean("body_mass_g")
+# Compute the maximum body mass for penguins with a bill length > 49
+max_body_mass = (
+    df.apply(float, ["bill_length_mm", "body_mass_g"])      # map
+    .where(lambda row: row["bill_length_mm"] > 49)          # filter
+    .reduce(max, "body_mass_g")                             # reduce
+)
+
+print(max_body_mass)
+# 5400.0
 ```
 
 ## Installation
@@ -46,6 +57,7 @@ species,island,bill_length_mm,bill_depth_mm,flipper_length_mm,body_mass_g,sex,ye
 
 from csv import DictReader, DictWriter
 from typing import Callable, Dict, List, Union
+from os import PathLike
 
 
 class DataFrame:
@@ -53,15 +65,20 @@ class DataFrame:
         self.data = data
         self.columns = list(data[0].keys())
 
-    def mean(self, column: str) -> float:
-        values = [float(row[column]) for row in self.data if row[column] != "nan"]
-        return sum(values) / len(values)
+    def apply(self, func: Callable, columns: List[str]):
+        for c in columns:
+            for row in self.data:
+                row[c] = func(row[c])
+        return self
+
+    def reduce(self, func: Callable, column: str):
+        return func(row[column] for row in self.data)
 
     def where(self, predicate: Callable):
-        subset = [{c: row[c] for c in self.columns} for row in self.data if predicate(row)]
+        subset = [{c: row[c] for c in self.columns} for row in self.data if predicate(row)]  # fmt: skip
         return DataFrame(data=subset)
 
-    def to_csv(self, file_name: str) -> None:
+    def to_csv(self, file_name: Union[str, PathLike]) -> None:
         with open(file_name, "w") as fh:
             writer = DictWriter(fh, fieldnames=self.columns)
             writer.writeheader()
@@ -84,7 +101,7 @@ class DataFrame:
         return "\n".join(d.__repr__() for d in self.data[:3]) + "\n...\n" + "\n".join(d.__repr__() for d in self.data[-3:]) + f"\n{len(self)} rows, {len(self.columns)} columns" if len(self) > 10 else "\n".join(d.__repr__() for d in self.data) + f"\n{len(self)} rows, {len(self.columns)} columns"  # fmt: skip
 
 
-def read_csv(file_name: str) -> DataFrame:
+def read_csv(file_name: Union[str, PathLike]) -> DataFrame:
     with open(file_name, "r") as fh:
         reader = DictReader(fh, delimiter=",", quotechar='"')
         return DataFrame([row for row in reader])
@@ -94,7 +111,7 @@ def read_csv(file_name: str) -> DataFrame:
 
 There are too many to name, I'm trying to be minimal here!
 
-Here's the weird one: *everything is a string*. If you want numeric comparison, you have to convert types on the fly:
+Here's the weird one: *everything is a string by default*. If you want numeric comparison, you have to convert types with `apply`, or convert types on the fly:
 
 ```python
 df.where(lambda row: float(row["bill_length_mm"]) > 49)
