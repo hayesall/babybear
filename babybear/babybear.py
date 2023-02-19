@@ -2,7 +2,7 @@
 # MIT License or Apache 2.0 License, at your choosing!
 
 """
-A microscopic data manipulation tool based on `pandas`.
+A microscopic, functional data manipulation tool based on `pandas`.
 """
 
 __all__ = ["read_csv", "DataFrame"]
