@@ -9,6 +9,7 @@ __all__ = ["read_csv", "DataFrame"]
 
 from csv import DictReader, DictWriter
 from typing import Callable, Dict, List, Union
+from os import PathLike
 
 
 class DataFrame:
@@ -29,7 +30,7 @@ class DataFrame:
         subset = [{c: row[c] for c in self.columns} for row in self.data if predicate(row)]  # fmt: skip
         return DataFrame(data=subset)
 
-    def to_csv(self, file_name: str) -> None:
+    def to_csv(self, file_name: Union[str, PathLike]) -> None:
         with open(file_name, "w") as fh:
             writer = DictWriter(fh, fieldnames=self.columns)
             writer.writeheader()
@@ -52,7 +53,7 @@ class DataFrame:
         return "\n".join(d.__repr__() for d in self.data[:3]) + "\n...\n" + "\n".join(d.__repr__() for d in self.data[-3:]) + f"\n{len(self)} rows, {len(self.columns)} columns" if len(self) > 10 else "\n".join(d.__repr__() for d in self.data) + f"\n{len(self)} rows, {len(self.columns)} columns"  # fmt: skip
 
 
-def read_csv(file_name: str) -> DataFrame:
+def read_csv(file_name: Union[str, PathLike]) -> DataFrame:
     with open(file_name, "r") as fh:
         reader = DictReader(fh, delimiter=",", quotechar='"')
         return DataFrame([row for row in reader])
