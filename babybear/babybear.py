@@ -35,6 +35,10 @@ class DataFrame:
             writer = DictWriter(fh, fieldnames=self.columns)
             writer.writeheader()
             writer.writerows(self.data)
+    
+    def get_values(self, columns: Union[slice, int, List[str]]):
+        values = [list(x.values()) for x in self.__getitem__(columns).data] 
+        return values
 
     def __len__(self):
         return len(self.data)
